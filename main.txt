@@ -1,0 +1,107 @@
+Function main()
+
+'For debug - Delete all previously generated shapes
+For el = ActiveDocument.Shapes.Count To 1 Step -1
+    ActiveDocument.Shapes(el).Delete
+Next el
+
+' + - - - - - - - - +
+' |   Excel setup   |
+' + - - - - - - - - +
+Dim xlApp As Object
+Dim xlBook As Object
+Dim xlSheet As Object
+Const strWorkbookName As String = "C:\Users\Leon\Desktop\Studeni_popusti.xlsx"
+
+On Error Resume Next
+Set xlApp = GetObject(, "Excel.Application")
+If Err Then
+    Set xlApp = CreateObject("Excel.Application")
+End If
+On Error GoTo 0
+Set xlBook = xlApp.Workbooks.Open(FileName:=strWorkbookName)
+xlApp.Visible = False
+Set xlSheet = xlBook.worksheets(1)
+
+'lbl_Exit:
+'    Set xlApp = Nothing
+'    Set xlBook = Nothing
+
+' + - - - - - - - - +
+' |   Word shapes   |
+' + - - - - - - - - +
+Dim elem As Shape
+Dim pos_y As Long: pos_y = 50 'Incremented after every two shapes per row
+Dim pos_x As Long: pos_x = 50 'Shall be switched between 50 and 300 only
+
+
+' do-while loop (until cell with main text is empty)
+
+' + - - - - - - - - +
+' |   Main loop     |
+' + - - - - - - - - +
+Dim i As Integer: i = 2
+Dim new_page As Integer: new_page = 1
+Dim current_section As Integer: current_section = 1
+Do While True
+    ' Get data from excel cells
+    Dim xl_txt As String: xl_txt = xlSheet.Cells(i, 3).Text
+    
+    If Len(xl_txt) = 0 Then
+        Exit Do
+    End If
+    
+    Dim xl_start As String: xl_start = xlSheet.Cells(i, 1).Value
+    Dim xl_stop As String: xl_stop = xlSheet.Cells(i, 2).Value
+    Dim xl_percent As String: xl_percent = xlSheet.Cells(i, 4).Text
+
+    ' Create shape
+    Set elem = ActiveDocument.Shapes.AddShape(msoShapeRoundedRectangle, pos_x, pos_y, 200, 100, ActiveDocument.Sections(current_section).Range)
+    elem.Fill.ForeColor = ColorConstants.vbWhite
+    elem.Line.ForeColor = ColorConstants.vbBlack
+    With elem.TextFrame.TextRange.Font
+        .Fill.ForeColor = ColorConstants.vbBlack
+        .Bold = msoTrue
+    End With
+    
+    Dim whole_txt As String: whole_txt = ""
+    
+    ' Base text
+    whole_txt = whole_txt & xl_txt
+    ' Discount
+    If InStr(xl_txt, "%") Then
+        ' pass
+    Else
+        whole_txt = whole_txt & ", " & xl_percent
+    End If
+    ' Discount timeframe
+    If Len(xl_start) = 0 Then
+        ' Pass
+    Else
+        whole_txt = whole_txt & vbNewLine & "Popust vrijedi" & vbNewLine & "od " & xl_start & " do " & xl_stop
+    End If
+    
+    elem.TextFrame.TextRange.Text = whole_txt
+    
+    ' Determine x-y pos for next element
+    If pos_x = 50 Then
+        pos_x = 300
+    Else
+        pos_y = pos_y + 120
+        pos_x = 50
+    End If
+    
+    i = i + 1
+    new_page = new_page + 1
+    
+    If new_page Mod 10 = 0 Then
+        ActiveDocument.Sections.Add
+        current_section = current_section + 1
+        pos_x = 50
+        pos_y = 50
+    End If
+Loop
+
+xlBook.Close
+
+End Function
